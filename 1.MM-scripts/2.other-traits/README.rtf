@@ -1,0 +1,44 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2761
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fswiss\fcharset0 Helvetica-Bold;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww18360\viewh12420\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 Date: 23 Jan 2024\
+Created by: VB \
+\
+0.add-rsid-to-HbA1c-and-LDL.sh\
+- adds rsIDs to HbA1c and LDL sumstats that did not have a SNP column\
+- saves LDL into GCST90018961_buildGRCh37.tsv.rsid.txt.gz\
+- saves HbA1c into GCST90014006_buildGRCh38.tsv.rsid.txt.gz\
+\
+1.a-and-b-paths-unadjusted-other-traits-MR.R \
+- this script obtains the unadjusted a and b paths for all non-olink traits using univariable MR\
+- output saved in "a-and-b-paths-unadjusted-uni-MR-date.xlsx"
+\f1\b \
+
+\f0\b0 \
+2.b-path-adjusted-other-traits.R \
+- this script obtains the adjusted b path using for all non-olink traits using MVMR \
+- also provides estimates for the direct effect of CM-MM controlling for each mediator\
+- combines adjusted IVW estimates into one document: b-paths-adjusted-2024-01-24.xlsx\
+- also combines a and adjusted b path estimates into:  "selected-a-and-b-paths-adjusted-", Sys.Date(), ".xlsx")\
+- outputs mvmr Egger, conditional F stats and Q stat\
+\
+3.mediation-prod-coef-adjusted.R\
+- obtains mediation estimates using the product of coefficients method for all selected mediators\
+- mediation output stored in \'93mediation-results-CM-other-traits-MM-adjusted-", Sys.Date(), ".xlsx"\
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f1\b \cf0 \
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\b0 \cf0 4.plot-a-b-paths-and-indirect-effect-other-traits.R
+\f1\b \
+
+\f0\b0 - plots a and b paths (unadjusted) for TwoSampleMR 
+\f1\b \
+
+\f0\b0 - plots indirect effect (product of coef)\
+}
