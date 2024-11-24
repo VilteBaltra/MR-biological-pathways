@@ -14,11 +14,11 @@ library(tidyverse)
 library(ieugwasr)
 
 # define path to working directory 
-PATH = "~/Documents/Projects/MR-mediation-CM-MM/output/OUTPUT-2024/DEPRESSION"
+PATH = ""
 setwd(PATH)
 # define path to functions
-FUNCTIONS = "/Users/vb506/Documents/Projects/MR-mediation-CM-MM/scripts/TIDY-WORKFLOW/source/" 
-SUMSTATS="/Users/vb506/Documents/Projects/MR-mediation-CM-MM/summary-stats/OLINK/Kaviar-160204-Public/vcfs/"
+FUNCTIONS = "" 
+SUMSTATS=""
 
 #---------------------------------#
 ###   SPECIFY OLINK GWASs NAMES ###

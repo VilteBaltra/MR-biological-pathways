@@ -8,17 +8,11 @@ library(patchwork)
 library(tidyverse)
 
 # PATH
-PATH <- " "
+PATH <- "~/Documents/Projects/MR-mediation-CM-MM/output/OUTPUT-2024/MULTIMORBIDITY/metabolites/"
 
 # read in unadjusted a and b paths
-a_df <- openxlsx::read.xlsx(paste0(PATH, "unadjusted-a-and-b-path-olink/olink-MM-uniMR-a-paths-2024-01-28.xlsx"), sheet = 1, rowNames = F)
-b_df_unadjusted <- openxlsx::read.xlsx(paste0(PATH, "unadjusted-a-and-b-path-olink/olink-MM-uniMR-unadjusted-b-paths-2024-01-28.xlsx"), sheet = 1, rowNames = F)
-# CRP stored separately so reading it in as well
-a_crp <- openxlsx::read.xlsx(paste0(PATH, "unadjusted-a-and-b-path-olink/CM-CRP-univariable-MR-unadjusted-a-and-b-2024-02-10.xlsx"), sheet = 1, rowNames = F)
-b_crp <- openxlsx::read.xlsx(paste0(PATH, "unadjusted-a-and-b-path-olink/CM-CRP-univariable-MR-unadjusted-a-and-b-2024-02-10.xlsx"), sheet = 2, rowNames = F)
-# combine all inflammatory markers (same order of columns so will use rbind, but always recheck if rerunning)
-a_df <- rbind(a_df, a_crp[, 1:9])
-b_df_unadjusted <- rbind(b_df_unadjusted, b_crp[, 1:9])
+a_df <- openxlsx::read.xlsx(paste0(PATH, "unadjusted-a-and-b-path-metabolites/metabolites-a-paths-unadjusted-uni-MR-2024-08-09-withnames-nothirdsource.xlsx"), sheet = 1, rowNames = F)
+b_df_unadjusted <- openxlsx::read.xlsx(paste0(PATH, "unadjusted-a-and-b-path-metabolites/metabolites-b-paths-unadjusted-uni-MR-2024-08-09-nothirdsource.xlsx"), sheet = 1, rowNames = F)
 
 #---------------------------------------------#
 #                     FORMAT
@@ -38,7 +32,7 @@ b2[, c('b', 'b.se', 'b.pval')] <- b2[, c('b', 'se', 'pval')]
 
 # combine output into same dataframe 
 df_tidy <- merge(a2[, c('a', 'a.se', 'a.pval', 'outcome')], b2[, c('b', 'b.se', 'b.pval', 'exposure')], by.x='outcome', by.y='exposure')
-rownames(df_tidy) <- sub("-1", "", df_tidy$outcome) # add mediator name as row name (remove '-1' from marker names)
+#rownames(df_tidy) <- sub("-1", "", df_tidy$outcome) # add mediator name as row name (remove '-1' from marker names)
 
 # define data format function
 my_data_format <- function(data){
@@ -59,6 +53,7 @@ my_data_format <- function(data){
 
 # format data
 data_a_b_paths_formatted <- my_data_format(data=df_tidy)
+data_a_b_paths_formatted$marker <- data_a_b_paths_formatted$outcome
 #saveRDS(data_a_b_paths_formatted, file = paste0(PATH, "data_a_b_paths_formatted_olink.rds")) 
 
 #---------------------------------#
@@ -71,10 +66,6 @@ adata$path <- "Maltreatment-Mediator"
 colnames(adata) <- c("b", "b.se", "b.pval", "b.lCI", "b.hCI", "marker", "path") # make colnames same for rbind
 bdata <- data_a_b_paths_formatted[, c("b", "b.se", "b.pval", "b.lCI", "b.hCI", "marker")]
 bdata$path <- "Mediator-Multimorbidity"
-olink_names_a <- adata$marker[!(adata$marker) == "CRP"] 
-adata$marker <- factor(adata$marker, levels = c(olink_names_a, "CRP") ) # places CRP first in plot
-olink_names_b <- bdata$marker[!(bdata$marker) == "CRP"]
-bdata$marker <- factor(bdata$marker, levels = c(olink_names_b, "CRP") ) # places CRP first in plot
 abdata <- rbind(adata, bdata)
 
 # arrange according to marker
@@ -144,4 +135,5 @@ forest_ab_paths3 <- forest_ab_paths2 +
 forest_ab_paths3
 
 ### save vertical ###
-ggsave(paste0(PATH, "a-and-b-paths-unadjusted-olink-", Sys.Date(), ".pdf"), height = 18, width = 12)
+ggsave(paste0(PATH, "a-and-b-paths-unadjusted-metabolites-", Sys.Date(), ".pdf"), height = 18, width = 12)
+

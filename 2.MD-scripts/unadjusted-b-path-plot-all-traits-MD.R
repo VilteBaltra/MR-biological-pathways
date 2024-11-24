@@ -9,29 +9,43 @@ library(patchwork)
 library(tidyverse)
 
 # specify path to dat
-PATH_olink = "~/Documents/Projects/MR-mediation-CM-MM/output/OUTPUT-2024/DEPRESSION/olink/"
-PATH_other = "~/Documents/Projects/MR-mediation-CM-MM/output/OUTPUT-2024/DEPRESSION/other-traits/"
-PATH = "~/Documents/Projects/MR-mediation-CM-MM/output/OUTPUT-2024/DEPRESSION/"
+PATH_olink = " "
+PATH_other = " "
+PATH = " "
 setwd(PATH)
 
 # readPATH# read in unadjusted a and b paths
 data_b_paths_formatted_olink <- openxlsx::read.xlsx("olink/unadjusted-b-path-md/olink-MD-uniMR-unadjusted-b-paths-2024-01-29.xlsx")
-data_b_paths_formatted_other <- openxlsx::read.xlsx("other-traits/unadjusted-b-path-md/b-paths-unadjusted-Egger-Q-stat-uni-MR-2024-01-29.xlsx") 
+data_b_paths_formatted_other_old <- openxlsx::read.xlsx("other-traits/unadjusted-b-path-md/b-paths-unadjusted-Egger-Q-stat-uni-MR-2024-01-29.xlsx") 
+data_b_paths_formatted_other <- openxlsx::read.xlsx("other-traits/unadjusted-b-path-md/lipids-large-with-and-withoutUKBB-DEPRESSION-uniMR-b-paths-2024-09-15.xlsx") 
 data_b_crp <- openxlsx::read.xlsx("olink/unadjusted-b-path-md/CRP-MD-univariable-MR-unadjusted-b-2024-02-15.xlsx") 
-  
+data_b_metabolic <- openxlsx::read.xlsx("metabolites/combined-uniMR-b-paths-metabolites-DEPRESSION-2024-09-16.xlsx")
+
+# keep ieu-b-4842 , ebi-a-GCST90014006, ieu-b-113,  ebi-a-GCST90002232, ebi-a-GCST90002238, ieu-b-116, ieu-a-1012
+data_b_paths_formatted_other_old_sub <- data_b_paths_formatted_other_old %>% filter(id.exposure %in% c('ieu-b-4842', 'ebi-a-GCST90014006', 'ieu-b-113', 'ebi-a-GCST90002232', 'ebi-a-GCST90002238', 'ieu-b-116', 'ieu-a-1012'))
+data_b_paths_formatted_other <- rbind(data_b_paths_formatted_other_old_sub, data_b_paths_formatted_other)  
+
 # subset olink to significant ones
+data_b_paths_formatted_olink$exposure <- sub("-1", "", data_b_paths_formatted_olink$exposure) # (remove '-1' from olink names)
 data_b_paths_formatted_olink_sub <- data_b_paths_formatted_olink %>% filter(method == "Inverse variance weighted" & pval < 0.05)
-data_b_paths_formatted_olink_sub$exposure <- sub("-1", "", data_b_paths_formatted_olink_sub$exposure) # (remove '-1' from olink names)
+data_b_paths_formatted_olink_sub <- data_b_paths_formatted_olink %>% filter(exposure %in% c(c('MIP.1.alpha', 'LAP.TGF.beta.1', 'HGF', 'FGF.21', 'CXCL6', 'CXCL5', 'CXCL1', 'CDCP1', 'CD244'), data_b_paths_formatted_olink_sub$exposure))
+
+# subset metabolites to significant ones
+data_b_metabolic_sub <- data_b_metabolic %>% filter(method == "Inverse variance weighted" & pval < 0.05)
+data_b_metabolic_sub <- data_b_metabolic %>% filter(Exposure %in% c('Cit', data_b_metabolic_sub$Exposure))
+data_b_metabolic_sub <- data_b_metabolic_sub[, c("Exposure", "Exposure.ID", "outcome", "method", "nsnp", "b", "se", "pval")] 
+colnames(data_b_metabolic_sub) <- c("exposure", "id.exposure", "outcome", "method", "nsnp", "b", "se", "pval") 
+data_b_metabolic_sub$id.outcome <- NA
 
 # subset other traits to IVW
 data_b_paths_formatted_other_sub <- data_b_paths_formatted_other %>% filter(method == "Inverse variance weighted")
 data_b_crp <- data_b_crp[data_b_crp$method == "Inverse variance weighted",]
 
 # combine output into one
-data_b_paths_formatted <- rbind(data_b_paths_formatted_olink_sub, data_b_paths_formatted_other_sub, data_b_crp[, c('id.exposure', 'id.outcome', 'outcome', 'exposure', 'method', 'nsnp', 'b', 'se', 'pval')])
+data_b_paths_formatted <- rbind(data_b_paths_formatted_olink_sub, data_b_paths_formatted_other_sub, data_b_metabolic_sub, data_b_crp[, c('id.exposure', 'id.outcome', 'outcome', 'exposure', 'method', 'nsnp', 'b', 'se', 'pval')])
 
 # specify names for each category
-inflammatory_names <- c("CRP", data_b_paths_formatted_olink_sub$exposure) 
+inflammatory_names <- c("CRP", unique(data_b_paths_formatted_olink_sub$exposure))
 glycaemic_names <- c("Fasting glucose || id:ebi-a-GCST90002232","Fasting glucose || id:ieu-b-113","Fasting insulin || id:ebi-a-GCST90002238", "Fasting insulin || id:ieu-b-116", "Glycated haemoglobin HbA1c levels (UKB data field 30750) || id:ebi-a-GCST90014006", "HbA1c || id:ieu-b-4842")
 cortisol_name <- "Cortisol || id:ieu-a-1012" 
 lipids_names <- as.character(unique((data_b_paths_formatted %>% filter(!exposure %in% c(inflammatory_names, glycaemic_names, cortisol_name)))$exposure))
@@ -58,7 +72,16 @@ data_b_paths_formatted$marker <- factor(data_b_paths_formatted$marker, levels = 
 
 # save markers as factor and arrange accordingly
 data_b_paths_formatted$marker <- as.factor(data_b_paths_formatted$marker) 
-data_b_paths_formatted <- data_b_paths_formatted %>% arrange(marker) # makes sure order of pvalues and factor names are the same (important as the order of levels in the factor will determine the order in the plot)
+
+# specify the order of levels of 'markers' as you wish to be plotted
+data_b_paths_formatted$marker <- factor(data_b_paths_formatted$marker, 
+                                        levels = c("CRP", inflammatory_names[2:length(inflammatory_names)], "Cortisol || id:ieu-a-1012", 
+                                                   "bOHBut", "Cit", "DHA", "FAw3", "SM", "UnsatDeg",
+                                                   "Fasting glucose || id:ebi-a-GCST90002232", "Fasting glucose || id:ieu-b-113", "Fasting insulin || id:ebi-a-GCST90002238",                                         
+                                                   "Fasting insulin || id:ieu-b-116", "Glycated haemoglobin HbA1c levels (UKB data field 30750) || id:ebi-a-GCST90014006", 
+                                                   "HbA1c || id:ieu-b-4842",  "nonHDL", "nonHDLwithUKBB","HDL", "HDLwithUKBB", "LDL", "LDLwithUKBB", "TC", "TCwithUKBB", "logTG", "logTGwithUKBB") )
+
+#data_b_paths_formatted <- data_b_paths_formatted %>% arrange(marker) # makes sure order of pvalues and factor names are the same (important as the order of levels in the factor will determine the order in the plot)
 
 # define data format function
 my_data_format <- function(data){
@@ -86,11 +109,12 @@ ind <- which(data_b_paths_formatted$category == "Cortisol")
 my_colors[ind] <- "#d0f4de"  # "#EBCADF" # Cortisol effects in green
 # add colours for glycaemic
 ind <- which(data_b_paths_formatted$category == "Glycaemic")
-my_colors[ind] <- "#ff99c8" # "#EBCADF" # Glycaemic effects in pink
+my_colors[ind] <- "#EDE981" # was pink: "#ff99c8" # Glycaemic effects in pink
 
 
 # reduce opacity of grid lines (default is 255)
 col_grid <- rgb(235, 235, 235, 100, maxColorValue = 290)
+
 
 # need to adjust so that a and b path significance is separated in plots
 forest_b_paths <- ggplot(
@@ -117,12 +141,13 @@ forest_b_paths <- ggplot(
   ) + scale_color_manual(values = my_colors) + 
   coord_flip() + 
   ggtitle(paste0(" ")) + 
-  theme(plot.title = element_text(size = 16, face = "bold")) + 
+  theme(plot.title = element_text(size = 16, face = "bold")) +
   scale_x_discrete(labels = c("C-reactive protein", inflammatory_names[2:length(inflammatory_names)], # spelling out CRP for clarity in figure
-                              "Cortisol", 
-                              expression("Fasting glucose"^c),expression("Fasting glucose"^b), expression("Fasting insulin"^c),expression("Fasting insulin"^b), expression("HbA1c"^c), expression("HbA1c"^b),
-                              expression("LDL cholesterol"^c), expression("LDL cholesterol"^a), expression("Total cholesterol"^c), expression("Total cholesterol"^a), expression("HDL cholesterol"^a), expression("HDL cholesterol"^b), expression("Triglycerides"^a), expression("Triglycerides"^b)))
-
+                              "Cortisol",
+                              "3-hydroxybutyrate", "Citrate", "Docosahexaenoic acid", "Omega-3 fatty acids", "Sphingomyelins", "Degree of unsaturation",
+                              expression("Fasting glucose"^a),expression("Fasting glucose"^b), expression("Fasting insulin"^a),expression("Fasting insulin"^b), expression("Glycated haemoglobin"^a), expression("Glycated haemoglobin"^b),
+                              "non-HDL cholesterol (no UKBB)", "non-HDL cholesterol", "HDL cholesterol (no UKBB)", "HDL cholesterol", "LDL cholesterol (no UKBB)", "LDL cholesterol", 
+                              "Total cholesterol (no UKBB)", "Total cholesterol", "Triglycerides (no UKBB)", "Triglycerides"))
 # mediator-depression figure
 forest_b_paths + geom_point(shape = 1,size = 8,colour = "darkgrey")
 

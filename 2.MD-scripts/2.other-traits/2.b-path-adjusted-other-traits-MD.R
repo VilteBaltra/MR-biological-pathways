@@ -35,10 +35,10 @@ library(MendelianRandomization) # for MVMR Egger
 library(MVMR) # for conditional F stat and modified form of Cochran's Q statistic
 
 # define path to working directory 
-PATH = "~/Documents/Projects/MR-mediation-CM-MM/output/OUTPUT-2024/DEPRESSION/other-traits/"
+PATH = " "
 setwd(PATH)
 # define path to functions
-FUNCTIONS = "/Users/vb506/Documents/Projects/MR-mediation-CM-MM/scripts/TIDY-WORKFLOW/source/" 
+FUNCTIONS = " " 
 
 # source functions
 source(paste0(FUNCTIONS, "my_mvmr_pval_olink_md.R")) # performs MVMR analysis. Replaced clump_data() with local ld_clump() for faster performance (+ no server connection issues)
@@ -103,210 +103,62 @@ mvdat_crp <- my_mvmr_pval_olink_md(exposure1.gwas = CM_gwas, exposure2.gwas = cr
 # set return_mvdat=TRUE to obtain input data for mvmr Egger analysis
 # set rerun=TRUE if input files for MVMR my_mv_extract_exposures_local() function inside my_mvmr_pval() have already been obtained
 
-#---------------------------------#
-#    READ IN TG GWAS (ieu-b-111)
-#---------------------------------#
-# read in TG (ieu-b-111.vcf.gz) gwas 
-
-# read in vcf gwas sumstats
-vcf <- readVcf("../../../../summary-stats/sumstats-2024/ieu-b-111.vcf.gz")
-
-# view key info
-vcf
-# dim: 12321875 1 
-#  List of length 9: ES, SE, LP, AF, SS, EZ, SI, NC, ID
-
-# explore it
-header(vcf)
-samples(header(vcf)) # "ieu-b-111"
-rowRanges(vcf)
-
-# Create a data frame:
-TG_vcf <- vcf_to_granges(vcf) %>% dplyr::as_tibble()
-# ID is rsid 
-# ES = effect size
-# SE = standard error 
-# AF = alternative allele freq
-# SS = sample size 
-# LP A      Float  -log10 p-value for effect estimate   
-
-# add sample size
-TG_vcf$N <- 441016 # sample size taken from https://gwas.mrcieu.ac.uk/datasets/ieu-b-111/
-
-# select key columns
-TG_vcf_sub <- TG_vcf[, c('ID', 'REF', 'ALT', 'ES', 'SE', 'AF', 'LP', 'id', 'N')]
-head(TG_vcf_sub)
-
-# rename columns
-names(TG_vcf_sub) <- c('SNP', 'A2', 'A1', 'BETA', 'SE', 'EAF', 'LP', 'Phenotype', 'N')
-head(TG_vcf_sub)
-
-# convert to normal p-value
-TG_vcf_sub$P <- 10^(-TG_vcf_sub$LP)
-
-# clean up 
-rm(vcf, TG_vcf, crp_gwas)
-gc()
-#---------------------------------#
-#            RUN MVMR
-#---------------------------------#
-# obtains direct effect of CM on CRP (to be used as adjusted b path in prod.coef mediation)
-# also obtains direct effect of CM on MM, controlling for CRP
-
-# run it uising mvmr_pval = 5e-6 
-mvdat_tg <- my_mvmr_pval_olink_md(exposure1.gwas = CM_gwas, exposure2.gwas = TG_vcf_sub, # note, I am using EU ancestry as ref for clumping here (can change inside function)
-                         exposure.names = c('cm', 'TG-ieu-b-111'), exposure.number = 2, pval_1 = 5e-6, pval_2 = 5e-8, mvmr_pval = 5e-6,
-                         return_mvdat=TRUE, rerun=TRUE)
-# pval_1 = pvalue threshold for exposure1.gwas hits
-# pval_2 = pvalue threshold for exposure2.gwas hits
-# mvmr_pval should be equivalent to the most lenient p-value in both exposures (used in mvmr analysis)
-# mvmr_pval should be equivalent to the most lenient p-value in both exposures (used in mvmr analysis)
-# set return_mvdat=TRUE to obtain input data for mvmr Egger analysis
-# set rerun=TRUE if input files for MVMR my_mv_extract_exposures_local() function inside my_mvmr_pval() have already been obtained
 
 #---------------------------------#
-#    READ IN TG GWAS (ieu-a-302)
+#     RUN MVMR (with UKBB)
 #---------------------------------#
-# read in TG (ieu-a-302.vcf.gz) gwas 
+library(data.table)
+CM_gwas <- fread("Retro_prospective_meta_childhoodmaltreatment.txt.gz", sep = " ")
 
-# read in vcf gwas sumstats
-vcf2 <- readVcf("../../../../summary-stats/sumstats-2024/ieu-a-302.vcf.gz")
-# dim: 2415963 1 
-#  List of length 9:  ES, SE, LP, AF, SS, EZ, SI, NC, ID
+# format exposure data
+CM_gwas$Phenotype <- "Maltreatment"
+CM_gwas$N <- 185414
+CM_gwas <- as.data.frame(CM_gwas)
+# columns should be named c("SNP", "CHR", "BP", "A1", "A2", "BETA", "SE", "P", "Phenotype", "N") 
 
-# ensure correct ID
-samples(header(vcf2)) # "ieu-a-302"
+file_names <- "logTG"
 
-# Create a data frame:
-TG_vcf2 <- vcf_to_granges(vcf2) %>% dplyr::as_tibble()
-# ID is rsid 
-# ES = effect size
-# SE = standard error 
-# AF = alternative allele freq
-# SS = sample size 
-# LP A      Float  -log10 p-value for effect estimate   
-
-# add sample size
-TG_vcf2$N <- 177861 # sample size taken from https://gwas.mrcieu.ac.uk/datasets/ieu-a-302/
-
-# select key columns
-TG_vcf_sub2 <- TG_vcf2[, c('ID', 'REF', 'ALT', 'ES', 'SE', 'AF', 'LP', 'id', 'N')]
-head(TG_vcf_sub2)
-
-# rename columns
-names(TG_vcf_sub2) <- c('SNP', 'A2', 'A1', 'BETA', 'SE', 'EAF', 'LP', 'Phenotype', 'N')
-head(TG_vcf_sub2)
-
-# convert to normal p-value
-TG_vcf_sub2$P <- 10^(-TG_vcf_sub2$LP)
-
-# clean up
-rm(vcf2, TG_vcf2)
-gc()
-
-#---------------------------------#
-#            RUN MVMR
-#---------------------------------#
-# obtains direct effect of CM on CRP (to be used as adjusted b path in prod.coef mediation)
-# also obtains direct effect of CM on MM, controlling for CRP
-
-# run it uising mvmr_pval = 5e-6 
-mvdat_tg2 <- my_mvmr_pval_olink_md(exposure1.gwas = CM_gwas, exposure2.gwas = TG_vcf_sub2, # note, I am using EU ancestry as ref for clumping here (can change inside function)
-                          exposure.names = c('cm', 'TG-ieu-a-302'), exposure.number = 2, pval_1 = 5e-6, pval_2 = 5e-8, mvmr_pval = 5e-6,
-                          return_mvdat=TRUE, rerun=TRUE)
-# pval_1 = pvalue threshold for exposure1.gwas hits
-# pval_2 = pvalue threshold for exposure2.gwas hits
-# mvmr_pval should be equivalent to the most lenient p-value in both exposures (used in mvmr analysis)
-
-
-#---------------------------------#
-#   READ IN HDL GWAS (id:ieu-b-109)
-#---------------------------------#
-# read in HDL (ieu-b-109.vcf.gz) gwas 
-
-# read in vcf gwas sumstats
-vcf_hdl <- readVcf("../../../../summary-stats/sumstats-2024/ieu-b-109.vcf.gz")
-vcf_hdl
-# dim:  12321875 1 
-#  List of length 9:  ES, SE, LP, AF, SS, EZ, SI, NC, ID
-
-# ensure correct ID
-samples(header(vcf_hdl)) # "ieu-b-109"
-
-# Create a data frame:
-hdl_gwas <- vcf_to_granges(vcf_hdl) %>% dplyr::as_tibble()
-# ID is rsid 
-# ES = effect size
-# SE = standard error 
-# AF = alternative allele freq
-# SS = sample size 
-# LP A      Float  -log10 p-value for effect estimate   
-
-# add sample size
-hdl_gwas$N <- 403943 # sample size taken from https://gwas.mrcieu.ac.uk/datasets/ieu-b-109/
-
-# select key columns
-hdl_gwas_sub <- hdl_gwas[, c('ID', 'REF', 'ALT', 'ES', 'SE', 'AF', 'LP', 'id', 'N')]
-head(hdl_gwas_sub)
-
-# rename columns
-names(hdl_gwas_sub) <- c('SNP', 'A2', 'A1', 'BETA', 'SE', 'EAF', 'LP', 'Phenotype', 'N')
-head(hdl_gwas_sub)
-
-# convert to normal p-value
-hdl_gwas_sub$P <- 10^(-hdl_gwas_sub$LP)
-
-# clean up
-rm(vcf_hdl, hdl_gwas)
-gc()
-
-#---------------------------------#
-#            RUN MVMR
-#---------------------------------#
-# obtains direct effect of CM on CRP (to be used as adjusted b path in prod.coef mediation)
-# also obtains direct effect of CM on MM, controlling for CRP
-
-# run it using mvmr_pval = 5e-6 
-mvdat_hdl <- my_mvmr_pval_olink_md(exposure1.gwas = CM_gwas, exposure2.gwas = hdl_gwas_sub, # note, I am using EU ancestry as ref for clumping here (can change inside function)
-                          exposure.names = c('cm', 'HDL-ieu-b-109'), exposure.number = 2, pval_1 = 5e-6, pval_2 = 5e-8, mvmr_pval = 5e-6,
-                          return_mvdat=TRUE, rerun=TRUE)
-# pval_1 = pvalue threshold for exposure1.gwas hits
-# pval_2 = pvalue threshold for exposure2.gwas hits
-# mvmr_pval should be equivalent to the most lenient p-value in both exposures (used in mvmr analysis)
-
-
-#-----------------------------------------------#
-#     COMBINE MVMR with Sensitivity analyses
-#-----------------------------------------------#
-# create empty df for MVMR results 
+# create three empty dataframes for b path results
 df_res <- data.frame()
-# create empty df for MVMR Egger results 
-df_egger <- data.frame()
+sensitivity_df <- data.frame()
 
-# specify function to add sensitivity analyses to mvmr results
-# saves output in df_res and df_egger
-all.output <- function(output.list, trait){
+for(trait in file_names){
   
-  # select res_mvmr output
-  res_mvmr <- output.list[[1]]
-  res_mvmr$mediator <- trait # add name of mediator
+  cat("Reading in", paste0(trait, "withUKBB"), "GWAS\n")
+  gwas <- fread(paste0("../lipids/",trait, "_INV_EUR_HRC_1KGP3_others_ALL.meta.singlevar.results.gz"))
+  gwas <- as.data.frame(gwas)
+  gwas$Phenotype <- paste0(trait, "withUKBB")
+  # columns should contain c("SNP", "CHR", "BP", "A1", "A2", "BETA", "SE", "P", "Phenotype", "N")
+  colnames(gwas) <- c("SNP", "CHR", "BP", "A2", "A1", "N", "N_studies", "EAF", "BETA", "SE", "pvalue_neg_log10",  "pvalue", "pvalue_neg_log10_GC", "P", "Phenotype") 
   
-  # select mvdat output
-  mvdat <- output.list[[2]]
+  # run it using mvmr_pval = 5e-6 
+  mvdat <- my_mvmr_pval_olink_md(exposure1.gwas = CM_gwas, exposure2.gwas = gwas, # note, I am using EU ancestry as ref for clumping here (can change inside function)
+                        exposure.names = c('cm', paste0(trait, "withUKBB")), exposure.number = 2, pval_1 = 5e-6, pval_2 = 5e-8, mvmr_pval = 5e-6,
+                        return_mvdat=TRUE, rerun=FALSE)
+  # pval_1 = pvalue threshold for exposure1.gwas hits
+  # pval_2 = pvalue threshold for exposure2.gwas hits
+  # mvmr_pval should be equivalent to the most lenient p-value in both exposures (used in mvmr analysis)
+  # set return_mvdat=TRUE to obtain input data for mvmr Egger analysis
+  # set rerun=TRUE if input files for MVMR my_mv_extract_exposures_local() function inside my_mvmr_pval() have already been obtained
+  
+  # run MVMR
+  # res_mvmr <- mv_multiple(mvdat[[2]], pval_threshold=5e-6) # same as below
+  res_mvmr <- mvdat[[1]]
+  df_res <- rbind(df_res, as.data.frame(res_mvmr))
   
   # run MVMR Egger 
-  mvmr_egger <- my_mvmregger(mvdat)
-  mvmr_egger$exposure <- obtain_exposure_names(mvdat) 
+  mvmr_egger <- my_mvmregger(mvdat[[2]])
+  mvmr_egger$exposure <- obtain_exposure_names(mvdat[[2]])
   
   # calculate conditional F statistics for instrument strength
-  my.F  <- format_mvmr(BXGs = mvdat$exposure_beta,
-                       BYG = mvdat$outcome_beta,
-                       seBXGs = mvdat$exposure_se,
-                       seBYG = mvdat$outcome_se,
-                       RSID = rownames(mvdat$exposure_beta))
+  my.F  <- format_mvmr(BXGs = mvdat[[2]]$exposure_beta,
+                       BYG = mvdat[[2]]$outcome_beta,
+                       seBXGs = mvdat[[2]]$exposure_se,
+                       seBYG = mvdat[[2]]$outcome_se,
+                       RSID = rownames(mvdat[[2]]$exposure_beta))
   sres <- strength_mvmr(r_input = my.F, gencov = 0) # Fixing covariance at 0
   sres <- as.data.frame(t(sres))
-  sres$exposure <- obtain_exposure_names(mvdat)
+  sres$exposure <- obtain_exposure_names(mvdat[[2]])
   
   # calculates modified form of Cochran's Q statistic 
   pres <- pleiotropy_mvmr(r_input = my.F, gencov = 0)
@@ -314,26 +166,74 @@ all.output <- function(output.list, trait){
   # save MVMR Egger with Fstat (per trait) and Q stat (overall)
   out <- merge(mvmr_egger, sres, by = "exposure")
   out <- cbind(out, pres)
-  out$mediator <- trait # add name of mediator
-  print(out)
-  #return
-  return(list(res_mvmr, out))
+  sensitivity_df <- rbind(sensitivity_df, out)
+  print(df_res)
+  print(sensitivity_df)
+  #write.csv(out, file = paste0('cm-', paste0(trait, "withUKBB"), '-md/results_mvmr_egger_CM.', paste0(trait, "withUKBB"), '.MD.csv'))
+  rm(gwas, mvdat, out)
+  gc()
+}
+
+
+#---------------------------------#
+#     RUN MVMR (without UKBB) 
+#---------------------------------#
+
+for(trait in file_names){
+  
+  cat("Reading in", trait, "GWAS\n")
+  gwas <- fread(paste0("../lipids/without_UKB_",trait, "_INV_EUR_HRC_1KGP3_others_ALL.meta.singlevar.results.gz"))
+  gwas <- as.data.frame(gwas)
+  gwas$Phenotype <- trait
+  # columns should contain c("SNP", "CHR", "BP", "A1", "A2", "BETA", "SE", "P", "Phenotype", "N")
+  colnames(gwas) <- c("SNP", "CHR", "BP", "A2", "A1", "N", "N_studies", "EAF", "BETA", "SE", "pvalue_neg_log10",  "pvalue", "pvalue_neg_log10_GC", "P", "Phenotype") 
+  
+  # run it using mvmr_pval = 5e-6 
+  mvdat <- my_mvmr_pval_olink_md(exposure1.gwas = CM_gwas, exposure2.gwas = gwas, # note, I am using EU ancestry as ref for clumping here (can change inside function)
+                                 exposure.names = c('cm', trait), exposure.number = 2, pval_1 = 5e-6, pval_2 = 5e-8, mvmr_pval = 5e-6,
+                                 return_mvdat=TRUE, rerun=FALSE)
+  # pval_1 = pvalue threshold for exposure1.gwas hits
+  # pval_2 = pvalue threshold for exposure2.gwas hits
+  # mvmr_pval should be equivalent to the most lenient p-value in both exposures (used in mvmr analysis)
+  # set return_mvdat=TRUE to obtain input data for mvmr Egger analysis
+  # set rerun=TRUE if input files for MVMR my_mv_extract_exposures_local() function inside my_mvmr_pval() have already been obtained
+  
+  # run MVMR
+  # res_mvmr <- mv_multiple(mvdat[[2]], pval_threshold=5e-6) # same as below
+  res_mvmr <- mvdat[[1]]
+  df_res <- rbind(df_res, as.data.frame(res_mvmr))
+  
+  # run MVMR Egger 
+  mvmr_egger <- my_mvmregger(mvdat[[2]])
+  mvmr_egger$exposure <- obtain_exposure_names(mvdat[[2]])
+  
+  # calculate conditional F statistics for instrument strength
+  my.F  <- format_mvmr(BXGs = mvdat[[2]]$exposure_beta,
+                       BYG = mvdat[[2]]$outcome_beta,
+                       seBXGs = mvdat[[2]]$exposure_se,
+                       seBYG = mvdat[[2]]$outcome_se,
+                       RSID = rownames(mvdat[[2]]$exposure_beta))
+  sres <- strength_mvmr(r_input = my.F, gencov = 0) # Fixing covariance at 0
+  sres <- as.data.frame(t(sres))
+  sres$exposure <- obtain_exposure_names(mvdat[[2]])
+  
+  # calculates modified form of Cochran's Q statistic 
+  pres <- pleiotropy_mvmr(r_input = my.F, gencov = 0)
+  
+  # save MVMR Egger with Fstat (per trait) and Q stat (overall)
+  out <- merge(mvmr_egger, sres, by = "exposure")
+  out <- cbind(out, pres)
+  sensitivity_df <- rbind(sensitivity_df, out)
+  print(df_res)
+  print(sensitivity_df)
+  #write.csv(out, file = paste0('cm-', trait), '-md/results_mvmr_egger_CM.', paste0(trait, "withUKBB"), '.MD.csv'))
+  rm(gwas, mvdat, out)
+  gc()
 
 }
 
-# our output: mvdat_crp, mvdat_tg, mvdat_tg2, mvdat_hba1c, mvdat_hdl, mvdat_hdl2, mvdat_fi2
-results_all1 <- all.output(output.list = mvdat_crp, trait = "CRP")
-results_all2 <- all.output(output.list = mvdat_tg, trait = "TG-ieu-b-111")
-results_all3 <- all.output(output.list = mvdat_tg2, trait = "TG-ieu-a-302")
-results_all4 <- all.output(output.list = mvdat_hdl, trait = "HDL-ieu-b-109")
+# save output
+openxlsx::write.xlsx(list(df_res=df_res, sensitivity_df=sensitivity_df), file = paste0("lipids-b-paths-adjusted-with-and-withoutUKBB-DEPRESSION-", Sys.Date(), ".xlsx"), 
+                     rowNames = T, overwrite = T)
 
-# combine all output
-res_combined <- rbind(results_all1[[1]], results_all2[[1]], results_all3[[1]], results_all4[[1]])
-sensitivity_combined <- rbind(results_all1[[2]], results_all2[[2]], results_all3[[2]], results_all4[[2]])
 
-# save all
-openxlsx::write.xlsx(res_combined, file = paste0('other-traits-MD-MVMR-adjusted-b-paths-', Sys.Date(), ".xlsx"), rowNames = F, overwrite = T)
-openxlsx::write.xlsx(sensitivity_combined, file =  paste0('other-traits-MD-MVMR-Egger-b-paths-', Sys.Date(), ".xlsx"), rowNames = F, overwrite = T)
-
-# view
-res_combined %>% filter(exposure != "Maltreatment") %>% filter(pval < 0.05) # none

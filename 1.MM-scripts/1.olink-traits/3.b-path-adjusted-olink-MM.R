@@ -18,11 +18,11 @@ library(MendelianRandomization) # for MVMR Egger
 library(MVMR) # for conditional F stat and modified form of Cochran's Q statistic
 
 # define path to working directory 
-PATH = "/Users/vb506/Documents/Projects/MR-mediation-CM-MM/output/OUTPUT-2024/MULTIMORBIDITY/olink/adjusted-b-path-olink/"
+PATH = " "
 setwd(PATH)
 # define path to functions
-FUNCTIONS = "/Users/vb506/Documents/Projects/MR-mediation-CM-MM/scripts/TIDY-WORKFLOW/source/" 
-SUMSTATS="/Users/vb506/Documents/Projects/MR-mediation-CM-MM/summary-stats/OLINK/Kaviar-160204-Public/vcfs/"
+FUNCTIONS = " " 
+SUMSTATS=" "
 
 # source function
 source(paste0(FUNCTIONS, "my_mvmr_pval_olink.R")) # VB: performs MVMR analysis. Replaced clump_data() with local ld_clump() for faster performance (+ no server connection issues)
@@ -159,9 +159,6 @@ for(trait in file_names){
 }
 
 # save all
-# openxlsx::write.xlsx(df_res, file = paste0('olink-MM-MVMR-adjusted-b-paths-', Sys.Date(), ".xlsx"), rowNames = F, overwrite = T)
-# openxlsx::write.xlsx(df_egger, file =  paste0('olink-MM-MVMR-Egger-b-paths-', Sys.Date(), ".xlsx"), rowNames = F, overwrite = T)
-
 openxlsx::write.xlsx(list('mvmr' = df_res, 'mvmr_egger' = df_egger), file =  paste0('olink-MM-MVMR-Egger-b-paths-', Sys.Date(), ".xlsx"), rowNames = F, overwrite = T)
 
 

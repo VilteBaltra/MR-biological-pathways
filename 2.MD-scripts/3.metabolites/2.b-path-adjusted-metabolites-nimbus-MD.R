@@ -1,13 +1,9 @@
-# MR SCRIPT - OLINK MARKERS
-# This script obtains adjusted b path that is later used to calculate the indirect effect (using the product of coefficients method)
-
 #---------------------------------#
 #           SET UP
 #---------------------------------#
 # clean session
-rm(list=ls())
-gc()
-
+# rm(list=ls())
+# gc()
 # load libraries 
 library(TwoSampleMR)
 library(tidyverse)
@@ -21,15 +17,12 @@ library(MVMR) # for conditional F stat and modified form of Cochran's Q statisti
 PATH = " "
 setwd(PATH)
 # define path to functions
-FUNCTIONS = " " 
 SUMSTATS=" "
 
-# source function
-source(paste0(FUNCTIONS, "my_mvmr_pval_olink_md.R")) # VB: performs MVMR analysis. Replaced clump_data() with local ld_clump() for faster performance (+ no server connection issues)
-# uses pval_threshold=5e-6 in mv_multiple(mvdat, pval_threshold=5e-6)
-source(paste0(FUNCTIONS, "my_mvmregger.R")) #  MVMR Egger function
+# source functions
+source("source/my_mvmr_pval.R") # performs MVMR analysis. Replaced clump_data() with local ld_clump() for faster performance (+ no server connection issues)
+source("source/my_mvmregger.R") #  MVMR Egger function
 
-# define function to print order of traits (for MVMR Egger output)
 obtain_exposure_names <- function(dat) {
   # print order of traits (relevant for MR Egger output)
   exposure1_name <- dat$expname %>% filter(id.exposure %in% colnames(dat$exposure_beta)[1])
@@ -54,7 +47,7 @@ obtain_exposure_names <- function(dat) {
 # Because of this I edited it to use ld_clump(), instead of remote clumping function. Requires library(ieugwasr)
 
 # first makes sure CM GWAS is read in
-CM_gwas <- read.delim("../../../../../summary-stats/Retro_prospective_meta_childhoodmaltreatment.txt.gz", sep = " ")
+CM_gwas <- read.delim("Retro_prospective_meta_childhoodmaltreatment.txt.gz", sep = " ")
 
 # format exposure data
 CM_gwas$Phenotype <- "Maltreatment"
@@ -66,46 +59,34 @@ names(CM_gwas) # correct
 
 
 #---------------------------------#
-###   LOOP THROUGH OLINK GWASs  ###
+###   LOOP THROUGH METABOLITE GWASs  ###
 #---------------------------------#
 # this loop will obtain b path estimate / direct effect of CM-MM
-# # Get a list of all files in the working directory
-# file_names <- c("VEGF.A-1", "TWEAK-1", "TNFSF14-1", "TGF.alpha-1", "TNFB-1", "TNFRSF9-1", "ST1A1-1", "PD.L1-1", "SIRT2-1", "SCF-1", "MCP.2-1", "MCP.3-1", "MCP.4-1", "MIP.1.alpha-1", "OSM-1",
-#                 "CASP.8-1", "CCL11-1", "CCL19-1", "CCL20-1", "CCL23-1", "CCL25-1", "CCL4-1", "CD244-1", "CD40-1", "CD5-1", "CD6-1", "CSF.1-1", "CST5-1", "CXCL1-1", "CXCL10-1", "CXCL11-1", "CXCL9-1", "DNER-1", "EN.RAGE-1",
-#                 "FGF.19-1", "FGF.23-1", "FGF.5-1", "GDNF-1", "IL.1.alpha-1", "IL.10RB-1", "IL.12B-1", "IL.15RA-1", "IL.17C-1", "IL.18-1", "IL.18R1-1", "IL.6-1", "IL.7-1", "IL.8-1",
-#                 "LIF.R-1", "MCP.1-1", "MMP.1-1", "MMP.10-1", "OPG-1", "SLAMF1-1", "TRAIL-1", "uPA-1", "4E.BP1-1", "ADA-1", "CDCP1-1", "CX3CL1-1", "CXCL5-1", "CXCL6-1", "Flt3L-1", "HGF-1", "IL.10-1", "TRANCE-1", "FGF.21-1",
-#                 "TSLP-1", "TNF-1", "STAMPB-1", "NRTN-1", "NT.3-1", "AXIN1-1", "Beta.NGF-1", "CCL28-1", "IFN.gamma-1", "IL.10RA-1", "IL.13-1", "IL.17A-1", 
-#                 "IL.2-1", "IL.20-1", "IL.20RA-1", "IL.22.RA1-1", "IL.24-1", "IL.2RB-1", "IL.33-1", "IL.4-1", "IL.5-1", "LIF-1", "LAP.TGF.beta.1-1", "ARTN-1") 
 
-# select only ones that passed initial mediator selection step (CRP obtained together with 'other-traits')
-a_or_b_path_significant <- c('MIP.1.alpha-1', 'LAP.TGF.beta.1-1', 'HGF-1', 'FGF.21-1', 'CXCL6-1', 'CXCL5-1', 'CDCP1-1', 'CD244-1', # significant effect in a path (CM-olink)
-                              'IFN.gamma-1', 'IL.2-1', 'IL.6-1', 'TNF-1')  # significant effect in b path (olink-depression)
+# specify traits that passed early mediator selection steps
+file_names <- c("GCST90301948.h.tsv.gz", "GCST90301955.h.tsv.gz", "GCST90301959.h.tsv.gz", "GCST90302103.h.tsv.gz", "GCST90302121.h.tsv.gz", "GCST90301949.h.tsv.gz") 
+# dir(SUMSTATS)
 
-
-### READ IN ALL INFLAMMATORY MARKERS IN A LOOP ###
+### READ IN ALL METABOLITE MARKERS IN A LOOP ###
 setwd(PATH)
 
 # create empty df for MVMR results 
 df_res <- data.frame()
-# create empty df for MVMR Egger results 
-df_egger <- data.frame()
 
-for(trait in a_or_b_path_significant){
+for(trait in file_names){
   
   cat("Reading in", trait, "GWAS\n")
-  gwas <- read.delim(paste0(SUMSTATS, trait, ".tbl.rsid.txt.gz"))
+  gwas <- read.delim(paste0(SUMSTATS, trait))
   
   # format exposure data
   gwas$Phenotype <- trait
-
+  
   # rename columns
   # columns should be named "SNP", "CHR","POS", "BETA", "SE", "EA", "NEA", "P", "N", "Z", "INFO"
-  names(gwas) <- c("CHR", "BP", "MarkerName", "A1", "A2", "eaf", "FreqSE", "MinFreq", "MaxFreq",  "BETA", "SE", "log.P.", "Direction", "HetISq", "HetChiSq", "HetDf", "logHetP", "N", "SNP", "Phenotype")
+  names(gwas) <- c("CHR", "BP", "A1", "A2", "BETA", "SE", "eaf", "P", "variant_id", "SNP", "direction",         
+                   "hetisq", "hetchisq", "hetdf", "hetpval", "hm_coordinate_conversion", "hm_code", "Phenotype")
   
-  # tranform log10 p value to standard p value
-  gwas$P <- 10^(gwas$log.P.) 
-  
-  gwas_subset <- gwas[, c("CHR", "BP", "SNP", "P", "A1" , "A2", "BETA",  "SE", "Phenotype", "N", "eaf")]
+  gwas_subset <- gwas[, c("CHR", "BP", "SNP", "P", "A1" , "A2", "BETA",  "SE", "Phenotype", "eaf")]
   head(gwas_subset)
   
   if(min(gwas_subset$P) > 0.000005){
@@ -114,13 +95,21 @@ for(trait in a_or_b_path_significant){
   
   # mvmr
   setwd(PATH)
+  source("my_mvmr_pval_olink_md_nimbus.R")
   output.list <- my_mvmr_pval_olink_md(exposure1.gwas = CM_gwas, exposure2.gwas = gwas_subset,
-                              exposure.names = c('cm', trait), exposure.number = 2, 
-                              pval_1 = 5e-6, pval_2 = 5e-6, mvmr_pval = 5e-6,
-                              return_mvdat=TRUE, rerun=FALSE)
+                                       exposure.names = c('cm', trait), exposure.number = 2, 
+                                       pval_1 = 5e-6, pval_2 = 5e-8, mvmr_pval = 5e-6,
+                                       return_mvdat=TRUE, rerun=FALSE)
   # select res_mvmr output
   res_mvmr <- output.list[[1]]
   res_mvmr$mediator <- trait # add name of mediator
+  
+  # # run MVMR
+  # res_mvmr <- mv_multiple(mvdat, pval_threshold=5e-06) # fits all exposures together (recommended as default in TwoSampleMR)
+  # 
+  # # generate OR
+  # res_mvmr <- generate_odds_ratios(res_mvmr$result)
+  # print(res_mvmr)
   
   # select mvdat output
   mvdat <- output.list[[2]]
@@ -135,6 +124,7 @@ for(trait in a_or_b_path_significant){
                        seBXGs = mvdat$exposure_se,
                        seBYG = mvdat$outcome_se,
                        RSID = rownames(mvdat$exposure_beta))
+  
   sres <- strength_mvmr(r_input = my.F, gencov = 0) # Fixing covariance at 0
   sres <- as.data.frame(t(sres))
   sres$exposure <- obtain_exposure_names(mvdat)
@@ -143,16 +133,15 @@ for(trait in a_or_b_path_significant){
   pres <- pleiotropy_mvmr(r_input = my.F, gencov = 0)
   
   # save MVMR Egger with Fstat (per trait) and Q stat (overall)
-  out <- merge(mvmr_egger, sres, by = "exposure")
-  out <- cbind(out, pres)
-  out$mediator <- trait # add name of mediator
-  #write.csv(out, file = paste0('results_mvmr_egger_', trait, '_MM.csv'))
+  colnames(mvmr_egger) <- paste0(colnames(mvmr_egger), "_egger")
+  tmp <- merge(mvmr_egger, sres, by.x = "exposure_egger", by.y = "exposure")
+  out <- cbind(tmp, pres)
+  out <- merge(res_mvmr, out, by.x = "exposure", by.y = "exposure_egger")
+  
   # combine 
-  df_egger <- rbind(df_egger, out)
-  print(df_egger)
-  # combine 
-  df_res <- rbind(df_res, res_mvmr)
+  df_res <- rbind(df_res, out)
   print(df_res)
+  
   # clear
   rm(gwas)
   rm(gwas_subset)
@@ -160,9 +149,7 @@ for(trait in a_or_b_path_significant){
 }
 
 # save all
-openxlsx::write.xlsx(df_res, file = paste0('olink-MD-MVMR-adjusted-b-paths-', Sys.Date(), ".xlsx"), rowNames = F, overwrite = T)
-openxlsx::write.xlsx(df_egger, file =  paste0('olink-MD-MVMR-Egger-b-paths-', Sys.Date(), ".xlsx"), rowNames = F, overwrite = T)
+openxlsx::write.xlsx(df_res, file = paste0('metabolites-MM-MVMR-adjusted-b-paths-DEPRESSION-', Sys.Date(), ".xlsx"), rowNames = F, overwrite = T)
 
-# view
-df_res %>% filter(exposure != "Maltreatment") %>% filter(pval < 0.05)
+
 

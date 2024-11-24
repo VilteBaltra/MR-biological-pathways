@@ -8,7 +8,7 @@ library(patchwork)
 library(tidyverse)
 
 # PATH
-PATH <- "~/Documents/Projects/MR-mediation-CM-MM/output/OUTPUT-2024/MULTIMORBIDITY/olink/"
+PATH <- " "
 
 # read in mediation results
 mediation_results <- openxlsx::read.xlsx(paste0(PATH, "mediation-olink/mediation-results-CM-olink-MM-adjusted-2024-02-11.xlsx"), rowNames = T)
@@ -40,14 +40,14 @@ indirect_effect_plot <- function(data, trait) {
   # choose colours for forest plot
   my_colors <- rep("#D9CDED", nrow(data)) # can use blue instead of purple or green "#a9def9"
   # add colours for lipids
-  ind <- which(data$category == "Lipids")
+  ind <- which(data$category == "Metabolic (Lipids)")
   my_colors[ind] <-"#EDE981" #  lipid effects in yellow
   # add colour for cortisol
   ind <- which(data$category == "Cortisol")
   my_colors[ind] <- "#d0f4de"  # "#EBCADF" # Cortisol effects in green
   # add colours for glycaemic
-  ind <- which(data$category == "Glycaemic")
-  my_colors[ind] <- "#ff99c8" # "#EBCADF" # Glycaemic effects in pink
+  ind <- which(data$category == "Metabolic (Glycaemic)")
+  my_colors[ind] <- "#EDE981" # was pink "#ff99c8" # Glycaemic effects in pink
   
   forest3 <- ggplot(
     data = data,
@@ -75,7 +75,8 @@ indirect_effect_plot <- function(data, trait) {
     # ggtitle(paste0("CM-", trait)) + # add title here
     theme(plot.title = element_text(size = 16, face = "bold")
     )  +
- scale_x_discrete(labels = c("CSF.1", "LIF.R", "C-reactive protein", expression("HbA1c"^c), expression("HbA1c"^b), expression("HDL cholesterol"^a), expression("HDL cholesterol"^b), expression("LDL cholesterol"^c), expression("Triglycerides"^a), expression("Triglycerides"^b)))
+  scale_x_discrete(labels = c("CSF.1", "LIF.R", "C-reactive protein", "Apolipoprotein B", "Esterified cholesterol", "Free cholesterol", "Remnant cholesterol", 
+                              expression("Glycated haemoglobin"^a), expression("Glycated haemoglobin"^b), "Total cholesterol (no UKBB)", "non-HDL cholesterol (no UKBB)", "non-HDL cholesterol", "LDL cholesterol (no UKBB)", "LDL cholesterol", "HDL cholesterol (no UKBB)", "HDL cholesterol", "Triglycerides (no UKBB)", "Triglycerides"))
   
   return(forest3)
 }
@@ -106,8 +107,7 @@ mediation_results_formatted <- my_data_format(data=mediation_results)
 # combine indirect effects into one plot for all traits (includes 'other traits' and 'olink' markers)
 
 # read in mediation results for other traits
-mediation_results_other_traits <- openxlsx::read.xlsx(paste0(PATH, "../other-traits/mediation-other-traits/mediation-results-CM-other-traits-MM-adjusted-2024-02-10.xlsx"), rowNames = T)
-
+mediation_results_other_traits <- openxlsx::read.xlsx(paste0(PATH, "../metabolites/mediation-metabolites/mediation-results-CM-metabolites-MM-2024-09-13-withlipids.xlsx"), rowNames = T)
 # add same names as for a and b paths
 mediation_results_other_traits$marker <- row.names(mediation_results_other_traits)
 
@@ -120,11 +120,17 @@ all_traits <- rbind(mediation_results_formatted, mediation_results_other_traits_
 # add category variable (used for assigning colours in plot)
 all_traits$category <- NA
 all_traits$category <- ifelse(rownames(all_traits) %in% c("CSF.1", "LIF.R", "CRP"), "Inflammatory",
-                              ifelse(rownames(all_traits) %in% c("HbA1c-ebi-a-GCST90014006", "HbA1c-ieu-b-4842"), "Glycaemic",
-                                     ifelse(rownames(all_traits) %in% c("HDL-ieu-a-299", "HDL-ieu-b-109", "LDL-ebi-a-GCST90018961", "TG-ieu-a-302", "TG-ieu-b-111"), "Lipids", NA)))
+                              ifelse(rownames(all_traits) %in% c("HbA1c-ebi-a-GCST90014006", "HbA1c-ieu-b-4842"), "Metabolic (Glycaemic)", "Metabolic (Lipids)"))
 
 # Change the levels of the marker variable to desired order in plot
-all_traits$marker <- factor(all_traits$marker, levels = c("CSF.1", "LIF.R", "CRP", "HbA1c-ebi-a-GCST90014006", "HbA1c-ieu-b-4842", "HDL-ieu-a-299", "HDL-ieu-b-109", "LDL-ebi-a-GCST90018961", "TG-ieu-a-302", "TG-ieu-b-111"))
+all_traits$marker <- factor(all_traits$marker, levels = c("CSF.1", "LIF.R", "CRP", 
+                                                          "Apolipoprotein B", "Esterified cholesterol", "Free cholesterol", "Remnant cholesterol",
+                                                          "HbA1c-ebi-a-GCST90014006", "HbA1c-ieu-b-4842", 
+                                                          "Total cholesterol",
+                                                          "non-HDL cholesterol", "non-HDL cholesterol-withUKBB",
+                                                          "LDL cholesterol ", "LDL cholesterol-withUKBB", 
+                                                          "HDL cholesterol ", "HDL cholesterol-withUKBB", 
+                                                          "Triglycerides", "Triglycerides-withUKBB"))
 
 plot_ind.effect <- indirect_effect_plot(data=all_traits, trait="Multimorbidity") # here plot product of coef 
 plot_ind.effect + geom_point(shape = 1, size = 7.5,colour = "darkgrey") # final version of Figure 2 in the manuscript
@@ -132,13 +138,4 @@ plot_ind.effect + geom_point(shape = 1, size = 7.5,colour = "darkgrey") # final 
 # version 1 (with spelled out mediator names)
 ggsave(paste0(PATH, "../mediation-product-coef-all-traits-superscript-", Sys.Date(), ".pdf"), height = 10, width = 7)
 ggsave(paste0(PATH, "../mediation-product-coef-all-traits-superscript-", Sys.Date(), ".png"), height = 10, width = 7)
-
-# version 2
-# tidy mediator names
-# all_traits$marker <- c("CSF.1", "LIF.R", "CRP", "HbA1c (GCST90014006)", "HbA1c (ieu-b-4842)", "HDL (ieu-a-299)", "HDL (ieu-b-109)", "LDL (GCST90018961)", "TG (ieu-a-302)", "TG (ieu-b-111)")
-# # Change the levels of the marker variable to desired order in plot
-# all_traits$marker <- factor(all_traits$marker, levels = c("CSF.1", "LIF.R", "CRP", "HbA1c (GCST90014006)", "HbA1c (ieu-b-4842)", "HDL (ieu-a-299)", "HDL (ieu-b-109)", "LDL (GCST90018961)", "TG (ieu-a-302)", "TG (ieu-b-111)" ))
-# 
-# plot_ind.effect.v2 <- indirect_effect_plot(data=all_traits, trait="Multimorbidity") # here plot product of coef 
-# plot_ind.effect.v2                          
 
