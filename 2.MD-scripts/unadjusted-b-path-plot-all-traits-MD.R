@@ -14,15 +14,15 @@ PATH_other = " "
 PATH = " "
 setwd(PATH)
 
-# readPATH# read in unadjusted a and b paths
+# read in unadjusted a and b paths
 data_b_paths_formatted_olink <- openxlsx::read.xlsx("olink/unadjusted-b-path-md/olink-MD-uniMR-unadjusted-b-paths-2024-01-29.xlsx")
 data_b_paths_formatted_other_old <- openxlsx::read.xlsx("other-traits/unadjusted-b-path-md/b-paths-unadjusted-Egger-Q-stat-uni-MR-2024-01-29.xlsx") 
 data_b_paths_formatted_other <- openxlsx::read.xlsx("other-traits/unadjusted-b-path-md/lipids-large-with-and-withoutUKBB-DEPRESSION-uniMR-b-paths-2024-09-15.xlsx") 
 data_b_crp <- openxlsx::read.xlsx("olink/unadjusted-b-path-md/CRP-MD-univariable-MR-unadjusted-b-2024-02-15.xlsx") 
 data_b_metabolic <- openxlsx::read.xlsx("metabolites/combined-uniMR-b-paths-metabolites-DEPRESSION-2024-09-16.xlsx")
 
-# keep ieu-b-4842 , ebi-a-GCST90014006, ieu-b-113,  ebi-a-GCST90002232, ebi-a-GCST90002238, ieu-b-116, ieu-a-1012
-data_b_paths_formatted_other_old_sub <- data_b_paths_formatted_other_old %>% filter(id.exposure %in% c('ieu-b-4842', 'ebi-a-GCST90014006', 'ieu-b-113', 'ebi-a-GCST90002232', 'ebi-a-GCST90002238', 'ieu-b-116', 'ieu-a-1012'))
+# keep ieu-b-4842 , ebi-a-GCST90014006, ebi-a-GCST90002232, ebi-a-GCST90002238, ieu-a-1012, -
+data_b_paths_formatted_other_old_sub <- data_b_paths_formatted_other_old %>% filter(id.exposure %in% c('ieu-b-4842', 'ebi-a-GCST90014006', 'ebi-a-GCST90002232', 'ebi-a-GCST90002238', '-', 'ieu-a-1012'))
 data_b_paths_formatted_other <- rbind(data_b_paths_formatted_other_old_sub, data_b_paths_formatted_other)  
 
 # subset olink to significant ones
@@ -36,7 +36,6 @@ data_b_metabolic_sub <- data_b_metabolic %>% filter(Exposure %in% c('Cit', data_
 data_b_metabolic_sub <- data_b_metabolic_sub[, c("Exposure", "Exposure.ID", "outcome", "method", "nsnp", "b", "se", "pval")] 
 colnames(data_b_metabolic_sub) <- c("exposure", "id.exposure", "outcome", "method", "nsnp", "b", "se", "pval") 
 data_b_metabolic_sub$id.outcome <- NA
-
 # subset other traits to IVW
 data_b_paths_formatted_other_sub <- data_b_paths_formatted_other %>% filter(method == "Inverse variance weighted")
 data_b_crp <- data_b_crp[data_b_crp$method == "Inverse variance weighted",]
@@ -46,7 +45,7 @@ data_b_paths_formatted <- rbind(data_b_paths_formatted_olink_sub, data_b_paths_f
 
 # specify names for each category
 inflammatory_names <- c("CRP", unique(data_b_paths_formatted_olink_sub$exposure))
-glycaemic_names <- c("Fasting glucose || id:ebi-a-GCST90002232","Fasting glucose || id:ieu-b-113","Fasting insulin || id:ebi-a-GCST90002238", "Fasting insulin || id:ieu-b-116", "Glycated haemoglobin HbA1c levels (UKB data field 30750) || id:ebi-a-GCST90014006", "HbA1c || id:ieu-b-4842")
+glycaemic_names <- c("Fasting glucose || id:ebi-a-GCST90002232","Fasting glucose","Fasting insulin || id:ebi-a-GCST90002238", "Fasting insulin", "Glycated haemoglobin HbA1c levels (UKB data field 30750) || id:ebi-a-GCST90014006", "HbA1c || id:ieu-b-4842")
 cortisol_name <- "Cortisol || id:ieu-a-1012" 
 lipids_names <- as.character(unique((data_b_paths_formatted %>% filter(!exposure %in% c(inflammatory_names, glycaemic_names, cortisol_name)))$exposure))
 
@@ -64,8 +63,8 @@ data_b_paths_formatted <- data_b_paths_formatted[match(order_vector, data_b_path
 data_b_paths_formatted$category <- NA
 data_b_paths_formatted$marker <- data_b_paths_formatted$exposure
 data_b_paths_formatted$category <- ifelse(data_b_paths_formatted$marker %in% inflammatory_names, "Inflammatory",
-                          ifelse(data_b_paths_formatted$marker %in% glycaemic_names, "Glycaemic",
-                                 ifelse(data_b_paths_formatted$marker %in% cortisol_name, "Cortisol", "Lipids")))
+                                          ifelse(data_b_paths_formatted$marker %in% glycaemic_names, "Glycaemic",
+                                                 ifelse(data_b_paths_formatted$marker %in% cortisol_name, "Cortisol", "Lipids")))
 
 # change the levels of the marker variable to desired order in plot
 data_b_paths_formatted$marker <- factor(data_b_paths_formatted$marker, levels = c(inflammatory_names, cortisol_name, glycaemic_names, lipids_names) )
@@ -77,8 +76,8 @@ data_b_paths_formatted$marker <- as.factor(data_b_paths_formatted$marker)
 data_b_paths_formatted$marker <- factor(data_b_paths_formatted$marker, 
                                         levels = c("CRP", inflammatory_names[2:length(inflammatory_names)], "Cortisol || id:ieu-a-1012", 
                                                    "bOHBut", "Cit", "DHA", "FAw3", "SM", "UnsatDeg",
-                                                   "Fasting glucose || id:ebi-a-GCST90002232", "Fasting glucose || id:ieu-b-113", "Fasting insulin || id:ebi-a-GCST90002238",                                         
-                                                   "Fasting insulin || id:ieu-b-116", "Glycated haemoglobin HbA1c levels (UKB data field 30750) || id:ebi-a-GCST90014006", 
+                                                   "Fasting glucose || id:ebi-a-GCST90002232", "Fasting glucose", "Fasting insulin || id:ebi-a-GCST90002238",                                         
+                                                   "Fasting insulin", "Glycated haemoglobin HbA1c levels (UKB data field 30750) || id:ebi-a-GCST90014006", 
                                                    "HbA1c || id:ieu-b-4842",  "nonHDL", "nonHDLwithUKBB","HDL", "HDLwithUKBB", "LDL", "LDLwithUKBB", "TC", "TCwithUKBB", "logTG", "logTGwithUKBB") )
 
 #data_b_paths_formatted <- data_b_paths_formatted %>% arrange(marker) # makes sure order of pvalues and factor names are the same (important as the order of levels in the factor will determine the order in the plot)
@@ -145,7 +144,7 @@ forest_b_paths <- ggplot(
   scale_x_discrete(labels = c("C-reactive protein", inflammatory_names[2:length(inflammatory_names)], # spelling out CRP for clarity in figure
                               "Cortisol",
                               "3-hydroxybutyrate", "Citrate", "Docosahexaenoic acid", "Omega-3 fatty acids", "Sphingomyelins", "Degree of unsaturation",
-                              expression("Fasting glucose"^a),expression("Fasting glucose"^b), expression("Fasting insulin"^a),expression("Fasting insulin"^b), expression("Glycated haemoglobin"^a), expression("Glycated haemoglobin"^b),
+                              expression("Fasting glucose"^a),expression("Fasting glucose"^c), expression("Fasting insulin"^a),expression("Fasting insulin"^c), expression("Glycated haemoglobin"^a), expression("Glycated haemoglobin"^b),
                               "non-HDL cholesterol (no UKBB)", "non-HDL cholesterol", "HDL cholesterol (no UKBB)", "HDL cholesterol", "LDL cholesterol (no UKBB)", "LDL cholesterol", 
                               "Total cholesterol (no UKBB)", "Total cholesterol", "Triglycerides (no UKBB)", "Triglycerides"))
 # mediator-depression figure
